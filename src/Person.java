@@ -25,6 +25,27 @@ public class Person {
         }
     }
 
+    public String DescSelfForStudent() {
+        return "[ID:" + this.ID +
+                "] [Name:" + this.LastName + " " + this.FirstName +
+                "] [Email:" + this.Email +
+                "]";
+    }
+    public String DescSelf() {
+        if (this.Type.equals("T")) {
+            return "[ID:" + this.ID +
+                    "] [Name:" + this.LastName + " " + this.FirstName +
+                    "] [Type:" + "Professor" +
+                    "] [Email:" + this.Email +
+                    "]";
+        } else {
+            return "[ID:" + this.ID +
+                    "] [Name:" + this.LastName + " " + this.FirstName +
+                    "] [Type:" + "Assistant" +
+                    "] [Email:" + this.Email +
+                    "]";
+        }
+    }
     public void PrintInfo() {
         System.out.println("Name: " + this.FirstName + " " + this.LastName);
         System.out.println("ID: " + this.ID);

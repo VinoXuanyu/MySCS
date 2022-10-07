@@ -1,13 +1,23 @@
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Scanner;
+import java.text.SimpleDateFormat;
+import java.util.*;
 import java.util.regex.Pattern;
 
 public class Test {
     public static boolean LoggedIn = false;
     public static String CurUserID = "";
+    public static String SelectedCourse = "";
+    
+    public static String CurMode = "";
     public static HashMap<String, Person> MapID2Person = new HashMap<>();
 
+    public static HashMap<String, Course> MapID2Course = new HashMap<>();
+
+    public static HashMap<String, Ware> MapID2Ware = new HashMap<>();
+
+    public static HashMap<String, Task> MapID2Task = new HashMap();
+
+
+    
     // check ID
     public static boolean CheckID(String ID) {
         try {
@@ -96,18 +106,158 @@ public class Test {
         return Pattern.matches(pattern, Password);
     }
 
+    public static boolean CheckCourseID(String courseID) {
+        String pattern = "C[0-9]{4}";
+        if (!Pattern.matches(pattern, courseID)) {
+            return false;
+        }
+        String year = courseID.substring(1, 3);
+        String latter = courseID.substring(3, 5);
+        if (Integer.parseInt(year) < 17 || Integer.parseInt(year) > 22) {
+            return false;
+        }
+        if (Integer.parseInt(latter) == 0) {
+            return false;
+        }
+        return true;
+    }
+
+    public static boolean CheckWareID(String WareID) {
+        String pattern = "W[0-9]{6}";
+        if (!Pattern.matches(pattern, WareID)) {
+            return false;
+        }
+        String former = WareID.substring(1, 5);
+        String latter = WareID.substring(5, 7);
+        if (latter.equals("00")) {
+            return false;
+        }
+        if (!former.equals(SelectedCourse.substring(1, 5))) {
+            return false;
+        }
+        return true;
+    }
+
+    public static boolean CheckWareName(String WareName) {
+        if (WareName.length() > 16 || WareName.length() < 6) {
+            return false;
+        }
+        String pattern = "[a-zA-Z0-9_]{1,14}\\.[a-zA-Z0-9]{1,14}";
+        return Pattern.matches(pattern, WareName);
+    }
+
+    public static boolean CheckTaskID(String TaskID) {
+        String pattern = "T[0-9]{6}";
+        if (!Pattern.matches(pattern, TaskID)) {
+            return false;
+        }
+        String former = TaskID.substring(1, 5);
+        String latter = TaskID.substring(5, 7);
+        if (latter.equals("00")) {
+            return false;
+        }
+        if (!former.equals(SelectedCourse.substring(1, 5))) {
+            return false;
+        }
+        return true;
+    }
+
+    public static boolean CheckTaskName(String TaskName) {
+        if (TaskName.length() > 16 || TaskName.length() < 6) {
+            return false;
+        }
+        String pattern = "[a-zA-Z0-9_]{1,14}\\.[a-zA-Z0-9]{1,14}";
+        return Pattern.matches(pattern, TaskName);
+    }
+
+    public static boolean CompareTime(String startTime, String finishTime) {
+        try {
+            SimpleDateFormat date = new SimpleDateFormat("yyyy-MM-dd-HH:mm:ss");
+            Date start = date.parse(startTime);
+            Date finish = date.parse(finishTime);
+
+            return finish.after(start);
+        } catch (Exception e) {
+            System.out.println("err in compare date");
+        }
+
+        return false;
+    }
+
+    public static boolean CheckTime(String Time) {
+        String[] terms = Time.split("-");
+        if (terms.length != 4) {
+            return false;
+        }
+        try {
+            String hourMinSec = terms[3];
+            String[] HMS = hourMinSec.split(":");
+            if (HMS.length != 3) {
+                return false;
+            }
+            int year = Integer.parseInt(terms[0]);
+            if (year < 1999 || year > 9999) {
+                return false;
+            }
+            SimpleDateFormat date = new SimpleDateFormat("yyyy-MM-dd-HH:mm:ss");
+            date.setLenient(false);
+            date.parse(Time);
+        } catch (Exception e) {
+            return false;
+        }
+        return true;
+    }
+
+    public static boolean CheckCourseName(String courseName) {
+        String pattern = pattern = "[a-zA-Z0-9_]{6,16}";
+        return Pattern.matches(pattern, courseName);
+    }
+    
+    public static boolean CheckIsAssistant(String user) {
+        for (Course c : MapID2Course.values()) {
+            if (c.Assistants.contains(user)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    public static boolean CheckIsTeacher(String user) {
+        if (MapID2Person.get(user).Type.equals("T")) {
+            return true;
+        }
+        return false;
+    }
+
+    public static boolean CheckIsStudent(String user) {
+        if (MapID2Person.get(user).Type.equals("S")) {
+            return true;
+        }
+        return false;
+    }
+    
+    public static boolean CheckArgumentsNum(String[] params, int... nums) {
+        for(int num : nums) {
+            if (params.length == num) {
+                return true;
+            }
+        }
+        System.out.println("arguments illegal");
+        return false;
+    }
+    
+    
     public static void HandleRegister(String[] params) {
-        if (params.length != 7) {
-            System.out.println("arguments illegal");
+        if (!CheckArgumentsNum(params, 6)) {
             return;
         }
 
-        String ID = params[1];
-        String FirstName = params[2];
-        String SecondName = params[3];
-        String Email = params[4];
-        String Password = params[5];
-        String PasswordAgain = params[6];
+        String ID = params[0];
+        String FirstName = params[1];
+        String SecondName = params[2];
+        String Email = params[3];
+        String Password = params[4];
+        String PasswordAgain = params[5];
 
         if (LoggedIn) {
             System.out.println("already logged in");
@@ -152,8 +302,7 @@ public class Test {
     }
 
     public static void HandleLogin(String[] params) {
-        if (params.length != 3) {
-            System.out.println("arguments illegal");
+        if (!CheckArgumentsNum(params, 2)) {
             return;
         }
 
@@ -162,8 +311,8 @@ public class Test {
             return;
         }
 
-        String ID = params[1];
-        String Password = params[2];
+        String ID = params[0];
+        String Password = params[1];
 
         if (!CheckID(ID)) {
             System.out.println("user id illegal");
@@ -185,6 +334,7 @@ public class Test {
             System.out.println("Hello Professor " + User.LastName +  "~");
         } else {
             System.out.println("Hello " + User.FirstName +  "~");
+            CurMode = "Student";
         }
 
         LoggedIn = true;
@@ -192,8 +342,7 @@ public class Test {
     }
 
     public static void HandleLogout(String[] params) {
-        if (params.length != 1) {
-            System.out.println("arguments illegal");
+        if (!CheckArgumentsNum(params, 0)) {
             return;
         }
 
@@ -204,20 +353,22 @@ public class Test {
 
         System.out.println("Bye~");
 
-        LoggedIn = false;
+        if (CheckIsStudent(CurUserID)) {
+            CurMode = "";
+        }
         CurUserID = "";
-
+        SelectedCourse = "";
+        LoggedIn = false;
     }
 
     public static void HandlePrintInfo(String[] params) {
-        if (!(params.length == 1 || params.length == 2)) {
-            System.out.println("arguments illegal");
+        if (!CheckArgumentsNum(params, 0, 1)) {
             return;
         }
 
         String ID = "";
         if (params.length == 2) {
-            ID = params[1];
+            ID = params[0];
         }
 
         if (!LoggedIn) {
@@ -225,7 +376,7 @@ public class Test {
             return;
         }
 
-        if (!ID.equals("") && MapID2Person.get(CurUserID).Type.equals("S")) {
+        if (!ID.equals("") && CheckIsStudent(CurUserID)) {
             System.out.println("permission denied");
             return;
         }
@@ -251,6 +402,603 @@ public class Test {
         return;
     }
 
+    public static void HandleAddCourse(String[] params) {
+        if (!CheckArgumentsNum(params, 2)) {
+            return;
+        }
+
+        String courseId = params[0];
+        String courseName = params[1];
+        if (!LoggedIn) {
+            System.out.println("not logged in");
+            return;
+        }
+
+        if (!CheckIsTeacher(CurUserID)) {
+            System.out.println("permission denied");
+            return;
+        }
+
+        if (!CheckCourseID(courseId)) {
+            System.out.println("course id illegal");
+            return;
+        }
+
+        if (MapID2Course.containsKey(courseId)) {
+            System.out.println("course id duplication");
+            return;
+        }
+
+        if (!CheckCourseName(courseName)) {
+            System.out.println("course name illegal");
+            return;
+        }
+
+        Course course = new Course(courseId, courseName);
+        course.Teachers.add(CurUserID);
+        MapID2Course.put(courseId, course);
+        System.out.println("add course success");
+    }
+
+    public static void HandleRemoveCourse(String[] params) {
+        if (!CheckArgumentsNum(params, 1)) {
+            return;
+        }
+
+        if (!LoggedIn) {
+            System.out.println("not logged in");
+            return;
+        }
+
+        if (!CheckIsTeacher(CurUserID)) {
+            System.out.println("permission denied");
+            return;
+        }
+
+        String courseId = params[0];
+        if (!CheckCourseID(courseId)) {
+            System.out.println("course id illegal");
+            return;
+        }
+
+        if (!MapID2Course.containsKey(courseId) || !MapID2Course.get(courseId).Teachers.contains(CurUserID)) {
+            System.out.println("course id not exist");
+            return;
+        }
+
+        MapID2Course.remove(courseId);
+        System.out.println("remove course success");
+    }
+
+    public static void HandleListCourse(String[] params) {
+        if (!CheckArgumentsNum(params, 0)) {
+            return;
+        }
+
+        if (!LoggedIn) {
+            System.out.println("not logged in");
+            return;
+        }
+
+        if (!CheckIsTeacher(CurUserID)) {
+            System.out.println("permission denied");
+            return;
+        }
+
+        ArrayList<String> courses = new ArrayList<>();
+        for (Course c : MapID2Course.values()) {
+            if (c.Teachers.contains(CurUserID)) {
+                courses.add(c.DescSelf());
+            }
+        }
+
+        if (courses.isEmpty()) {
+            System.out.println("course not exist");
+            return;
+        }
+
+        courses.sort(Comparator.naturalOrder());
+        for (String c : courses) {
+            System.out.println(c);
+        }
+    }
+
+    public static void HandleSelectCourse(String[] params) {
+        if (!CheckArgumentsNum(params, 1)) {
+            return;
+        }
+
+        if (!LoggedIn) {
+            System.out.println("not logged in");
+            return;
+        }
+
+        if (!(CheckIsTeacher(CurUserID) || CheckIsAssistant(CurUserID))) {
+            System.out.println("permission denied");
+            return;
+        }
+
+        String courseId = params[0];
+        if (!CheckCourseID(courseId)) {
+            System.out.println("course id illegal");
+            return;
+        }
+
+        if (!MapID2Course.containsKey(courseId) ||
+                !(MapID2Course.get(courseId).Teachers.contains(CurUserID)
+                        || MapID2Course.get(courseId).Assistants.contains(CurUserID))) {
+            System.out.println("course id not exist");
+            return;
+        }
+
+        SelectedCourse = courseId;
+        System.out.println("select course success");
+    }
+
+    public static void HandleAddAdmin(String[] params) {
+        if (params.length == 0) {
+            System.out.println("arguments illegal");
+            return;
+        }
+
+        if (!LoggedIn) {
+            System.out.println("not logged in");
+            return;
+        }
+
+        if (!CheckIsTeacher(CurUserID)) {
+            System.out.println("permission denied");
+            return;
+        }
+
+        if (SelectedCourse.isEmpty()) {
+            System.out.println("no course selected");
+            return;
+        }
+
+        for (String user : params) {
+            if (!CheckID(user)) {
+                System.out.println("user id illegal");
+                return;
+            }
+        }
+
+        for (String user : params) {
+            if (!MapID2Person.containsKey(user)) {
+                System.out.println("user id not exist");
+                return;
+            }
+        }
+
+        for (String user : params) {
+            if (MapID2Person.get(user).Type.equals("T")) {
+                MapID2Course.get(SelectedCourse).Teachers.add(user);
+            } else {
+                MapID2Course.get(SelectedCourse).Assistants.add(user);
+            }
+        }
+
+        System.out.println("add admin success");
+    }
+
+    public static void HandleRemoveAdmin(String[] params) {
+        if (!CheckArgumentsNum(params, 1)) {
+            return;
+        }
+
+        if (!LoggedIn) {
+            System.out.println("not logged in");
+            return;
+        }
+
+        if (!CheckIsTeacher(CurUserID)) {
+            System.out.println("permission denied");
+            return;
+        }
+
+        if (SelectedCourse.isEmpty()) {
+            System.out.println("no course selected");
+            return;
+        }
+
+        String user = params[0];
+        if (!CheckID(user)) {
+            System.out.println("user id illegal");
+            return;
+        }
+
+        if (!MapID2Person.containsKey(user) || MapID2Course.get(SelectedCourse).Teachers.contains(user)) {
+            System.out.println("user id not exist");
+            return;
+        }
+
+        if (MapID2Person.get(user).Type.equals("T")) {
+            MapID2Course.get(SelectedCourse).Teachers.remove(user);
+        } else {
+            MapID2Course.get(SelectedCourse).Assistants.remove(user);
+        }
+
+        System.out.println("remove admin success");
+    }
+
+    public static void HandleListAdmin(String[] params) {
+        if (!CheckArgumentsNum(params, 0)) {
+            return;
+        }
+
+        if (!LoggedIn) {
+            System.out.println("not logged in");
+            return;
+        }
+
+        if (!(CheckIsTeacher(CurUserID) || CheckIsAssistant(CurUserID))){
+                System.out.println("permission denied");
+                return;
+        }
+
+        if (SelectedCourse.isEmpty()) {
+            System.out.println("no course selected");
+            return;
+        }
+
+        String[] teachers = new String[MapID2Course.get(SelectedCourse).Teachers.size()];
+        String[] assistants = new String[MapID2Course.get(SelectedCourse).Assistants.size()];
+        String[] admins = new String[teachers.length + assistants.length];
+        MapID2Course.get(SelectedCourse).Teachers.toArray(teachers);
+        MapID2Course.get(SelectedCourse).Assistants.toArray(assistants);
+
+        System.arraycopy(teachers, 0, admins, 0, teachers.length);
+        System.arraycopy(assistants, 0, admins, teachers.length, assistants.length);
+        Arrays.sort(admins);
+        for (String w : admins) {
+            System.out.println(MapID2Person.get(w).DescSelf());
+        }
+    }
+    
+    public static void HandleChangeRole(String[] params) {
+        if (!CheckArgumentsNum(params, 0)) {
+            return;
+        }
+
+        if (!LoggedIn) {
+            System.out.println("not logged in");
+            return;
+        }
+        
+        if (CheckIsTeacher(CurUserID)) {
+            System.out.println("permission denied");
+            return;
+        }
+
+        if (!CheckIsAssistant(CurUserID)) {
+            System.out.println("permission denied");
+            return;
+        }
+
+        if (CurMode.equals("Student")) {
+            CurMode = "Assistant";
+            System.out.println("change into Assistant success");
+        } else {
+            CurMode = "Student";
+            System.out.println("change into Student success");
+        }
+    }
+
+    public static void HandleAddWare(String[] params) {
+        if (!CheckArgumentsNum(params, 2)) {
+            return;
+        }
+
+        if (!LoggedIn) {
+            System.out.println("not logged in");
+            return;
+        }
+
+        if (!CheckIsTeacher(CurUserID)) {
+            System.out.println("permission denied");
+            return;
+        }
+
+        if (SelectedCourse.isEmpty()) {
+            System.out.println("no course selected");
+            return;
+        }
+
+        if (!CheckWareID(params[0])) {
+            System.out.println("ware id illegal");
+            return;
+        }
+
+        if (MapID2Ware.containsKey(params[0])) {
+            System.out.println("ware id duplication");
+            return;
+        }
+        if (!CheckWareName(params[1])) {
+            System.out.println("ware name illegal");
+            return;
+        }
+
+        MapID2Ware.put(params[0], new Ware(params[0], params[1]));
+        MapID2Course.get(SelectedCourse).Wares.add(params[0]);
+        System.out.println("add ware success");
+    }
+
+    public static void HandleRemoveWare(String[] params) {
+        if (!CheckArgumentsNum(params, 1)) {
+            return;
+        }
+
+        if (!LoggedIn) {
+            System.out.println("not logged in");
+            return;
+        }
+
+        if (!CheckIsTeacher(CurUserID)) {
+            System.out.println("permission denied");
+            return;
+        }
+
+        if (SelectedCourse.isEmpty()) {
+            System.out.println("no course selected");
+            return;
+        }
+
+        if (!CheckWareID(params[0])) {
+            System.out.println("ware id illegal");
+            return;
+        }
+
+        if (!MapID2Course.get(SelectedCourse).Wares.contains(params[0]) ||
+            !MapID2Ware.containsKey(params[0])) {
+            System.out.println("ware id not exist");
+            return;
+        }
+
+        MapID2Ware.remove(params[0]);
+        MapID2Course.get(SelectedCourse).Wares.remove(params[0]);
+        System.out.println("remove ware success");
+    }
+
+    public static void HandleListWare(String[] params) {
+        if (!CheckArgumentsNum(params, 0)) {
+            return;
+        }
+
+        if (!LoggedIn) {
+            System.out.println("not logged in");
+            return;
+        }
+
+        if (!(CheckIsTeacher(CurUserID)|| CheckIsAssistant(CurUserID))) {
+            System.out.println("permission denied");
+            return;
+        }
+
+        if (SelectedCourse.isEmpty()) {
+            System.out.println("no course selected");
+            return;
+        }
+        String[] wares = new String[MapID2Course.get(SelectedCourse).Wares.size()];
+        MapID2Course.get(SelectedCourse).Wares.toArray(wares);
+        Arrays.sort(wares);
+
+        for (String w : wares) {
+            System.out.println(MapID2Ware.get(w).DescSelf());
+        }
+    }
+
+    public static void HandleAddTask(String[] params) {
+        if (!CheckArgumentsNum(params, 4)) {
+            return;
+        }
+
+        if (!LoggedIn) {
+            System.out.println("not logged in");
+            return;
+        }
+
+        if (!(CheckIsTeacher(CurUserID)|| CheckIsAssistant(CurUserID))) {
+            System.out.println("permission denied");
+            return;
+        }
+
+        if (SelectedCourse.isEmpty()) {
+            System.out.println("no course selected");
+            return;
+        }
+
+        if (!CheckTaskID(params[0])) {
+            System.out.println("task id illegal");
+            return;
+        }
+
+        if (MapID2Task.containsKey(params[0])) {
+            System.out.println("task id duplication");
+            return;
+        }
+        if (!CheckTaskName(params[1])) {
+            System.out.println("task name illegal");
+            return;
+        }
+        if (!(CheckTime(params[2]) && CheckTime(params[3]) && CompareTime(params[2], params[3]))){
+            System.out.println("task time illegal");
+            return;
+        }
+        MapID2Task.put(params[0], new Task(params[0], params[1], params[2], params[3]));
+        MapID2Course.get(SelectedCourse).Tasks.add(params[0]);
+        System.out.println("add task success");
+    }
+
+    public static void HandleRemoveTask(String[] params) {
+        if (!CheckArgumentsNum(params, 1)) {
+            return;
+        }
+
+        if (!LoggedIn) {
+            System.out.println("not logged in");
+            return;
+        }
+
+        if (!(CheckIsTeacher(CurUserID)|| CheckIsAssistant(CurUserID))) {
+            System.out.println("permission denied");
+            return;
+        }
+
+        if (SelectedCourse.isEmpty()) {
+            System.out.println("no course selected");
+            return;
+        }
+
+        if (!CheckTaskID(params[0])) {
+            System.out.println("task id illegal");
+            return;
+        }
+
+        if (!MapID2Course.get(SelectedCourse).Tasks.contains(params[0]) ||
+                !MapID2Task.containsKey(params[0])) {
+            System.out.println("task id not exist");
+            return;
+        }
+
+        MapID2Task.remove(params[0]);
+        MapID2Course.get(SelectedCourse).Tasks.remove(params[0]);
+        System.out.println("remove task success");
+    }
+
+    public static void HandleListTask(String[] params) {
+        if (!CheckArgumentsNum(params, 0)) {
+            return;
+        }
+
+        if (!LoggedIn) {
+            System.out.println("not logged in");
+            return;
+        }
+
+        if (!(CheckIsTeacher(CurUserID)|| CheckIsAssistant(CurUserID))) {
+            System.out.println("permission denied");
+            return;
+        }
+
+        if (SelectedCourse.isEmpty()) {
+            System.out.println("no course selected");
+            return;
+        }
+
+        String[] tasks = new String[MapID2Course.get(SelectedCourse).Tasks.size()];
+        MapID2Course.get(SelectedCourse).Tasks.toArray(tasks);
+        Arrays.sort(tasks);
+
+        for (String w : tasks) {
+            System.out.println(MapID2Task.get(w).DescSelf());
+        }
+    }
+
+    public static void HandleAddStudents(String[] params) {
+        if (params.length == 0) {
+            System.out.println("arguments illegal");
+            return;
+        }
+
+        if (!LoggedIn) {
+            System.out.println("not logged in");
+            return;
+        }
+
+        if (!(CheckIsTeacher(CurUserID)|| CheckIsAssistant(CurUserID))) {
+            System.out.println("permission denied");
+            return;
+        }
+
+        if (SelectedCourse.isEmpty()) {
+            System.out.println("no course selected");
+            return;
+        }
+
+        for (String u : params) {
+            if (!CheckID(u)) {
+                System.out.println("user id illegal");
+                return;
+            }
+            if (!MapID2Person.containsKey(u)) {
+                System.out.println("user id not exist");
+                return;
+            }
+            if (CheckIsTeacher(u)) {
+                System.out.println("I'm professor rather than student!");
+                return;
+            }
+        }
+
+        for (String u : params) {
+            MapID2Course.get(SelectedCourse).Students.add(u);
+        }
+        System.out.println("add student success");
+    }
+
+    public static void HandleRemoveStudent(String[] params) {
+        if (!CheckArgumentsNum(params, 1)) {
+            return;
+        }
+
+        if (!LoggedIn) {
+            System.out.println("not logged in");
+            return;
+        }
+
+        if (!(CheckIsTeacher(CurUserID)|| CheckIsAssistant(CurUserID))) {
+            System.out.println("permission denied");
+            return;
+        }
+
+        if (SelectedCourse.isEmpty()) {
+            System.out.println("no course selected");
+            return;
+        }
+
+        if (!CheckID(params[0])) {
+            System.out.println("user id illegal");
+            return;
+        }
+
+        if (!(MapID2Person.containsKey(params[0]) &&
+                MapID2Course.get(SelectedCourse).Students.contains(params[0]))){
+            System.out.println("user id not exist");
+            return;
+        }
+
+        MapID2Course.get(SelectedCourse).Students.remove(params[0]);
+        System.out.println("remove student success");
+    }
+
+    public static void HandleListStudent(String[] params) {
+        if (!CheckArgumentsNum(params, 0)) {
+            return;
+        }
+
+        if (!LoggedIn) {
+            System.out.println("not logged in");
+            return;
+        }
+
+        if (!(CheckIsTeacher(CurUserID)|| CheckIsAssistant(CurUserID))) {
+            System.out.println("permission denied");
+            return;
+        }
+
+        if (SelectedCourse.isEmpty()) {
+            System.out.println("no course selected");
+            return;
+        }
+
+        String[] students = new String[MapID2Course.get(SelectedCourse).Students.size()];
+        MapID2Course.get(SelectedCourse).Students.toArray(students);
+        Arrays.sort(students);
+
+        for (String w : students) {
+            System.out.println(MapID2Person.get(w).DescSelfForStudent());
+        }
+    }
     public static void main(String[] args) {
         Scanner in = new Scanner(System.in);
         String argStr = "";
@@ -261,9 +1009,15 @@ public class Test {
                     System.out.println("----- Good Bye! -----");
                     break;
                 }
-                String[] params = argStr.split("\\s+");
-                String command = params[0];
-
+                String[] param = argStr.split("\\s+");
+                String command = param[0];
+                String[] params;
+                if (param.length > 1) {
+                    params = new String[param.length - 1];
+                } else {
+                    params = new String[]{};
+                }
+                System.arraycopy(param, 1, params, 0, params.length);
                 switch (command) {
                     case "register": {
                         HandleRegister(params);
@@ -283,17 +1037,89 @@ public class Test {
                         HandlePrintInfo(params);
                         break;
                     }
+                    case "addCourse": {
+                        HandleAddCourse(params);
+                        break;
+                    }
+                    case "removeCourse": {
+                        HandleRemoveCourse(params);
+                        break;
+                    }
+                    case "listCourse": {
+                        HandleListCourse(params);
+                        break;
+                    }
+                    case "selectCourse": {
+                        HandleSelectCourse(params);
+                        break;
+                    }
+                    case "addAdmin": {
+                        HandleAddAdmin(params);
+                        break;
+                    }
+                    case "removeAdmin": {
+                        HandleRemoveAdmin(params);
+                        break;
+                    }
+                    case "listAdmin": {
+                        HandleListAdmin(params);
+                        break;
+                    }
+                    case "changeRole": {
+                        HandleChangeRole(params);
+                        break;
+                    }
+                    case "addWare": {
+                        HandleAddWare(params);
+                        break;
+                    }
+                    case "removeWare": {
+                        HandleRemoveWare(params);
+                        break;
+                    }
+                    case "listWare": {
+                        HandleListWare(params);
+                        break;
+                    }
+                    case "addTask": {
+                        HandleAddTask(params);
+                        break;
+                    }
+                    case "removeTask": {
+                        HandleRemoveTask(params);
+                        break;
+                    }
+                    case "listTask": {
+                        HandleListTask(params);
+                        break;
+                    }
+                    case "addStudent": {
+                        HandleAddStudents(params);
+                        break;
+                    }
+                    case "removeStudent": {
+                        HandleRemoveStudent(params);
+                        break;
+                    }
+                    case "listStudent": {
+                        HandleListStudent(params);
+                        break;
+                    }
                     default: {
                         System.out.println("command " + "\'" + command + "\'" + " not found");
                         break;
                     }
                 }
             } catch (Exception ex) {
-                System.out.println(argStr);
+                System.out.println("err: " + argStr);
+                System.out.println(ex.getMessage());
+                System.out.println(ex.getStackTrace());;
                 continue;
             }
         }
     }
+
+
 
 
 }
