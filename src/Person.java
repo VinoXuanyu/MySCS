@@ -46,6 +46,19 @@ public class Person {
                     "]";
         }
     }
+    public String DescSelfWithoutID() {
+        if (this.Type.equals("T")) {
+            return  "[Name:" + this.LastName + " " + this.FirstName +
+                    "] [Type:" + "Professor" +
+                    "] [Email:" + this.Email +
+                    "]";
+        } else {
+            return  "[Name:" + this.LastName + " " + this.FirstName +
+                    "] [Type:" + "Assistant" +
+                    "] [Email:" + this.Email +
+                    "]";
+        }
+    }
     public void PrintInfo() {
         System.out.println("Name: " + this.FirstName + " " + this.LastName);
         System.out.println("ID: " + this.ID);

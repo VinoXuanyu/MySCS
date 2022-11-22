@@ -1,8 +1,12 @@
+import java.io.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Pattern;
-
+// ./pat ta -judge 3-21210108-金炫宇/ -pwd
 public class Test {
+    final static String dataDir = "./data";
+
+    public static Scanner in = new Scanner(System.in);
     public static boolean LoggedIn = false;
     public static String CurUserID = "";
     public static String SelectedCourse = "";
@@ -14,7 +18,11 @@ public class Test {
 
     public static HashMap<String, Ware> MapID2Ware = new HashMap<>();
 
-    public static HashMap<String, Task> MapID2Task = new HashMap();
+    public static HashMap<String, Task> MapID2Task = new HashMap<>();
+
+    public static HashMap<String, ArrayList<VM>> MapCourse2VMs = new HashMap();
+
+    public static HashMap<String , VM> MapStudentAndCourse2VM = new HashMap<>();
 
 
     
@@ -246,7 +254,7 @@ public class Test {
         return false;
     }
     
-    
+
     public static void HandleRegister(String[] params) {
         if (!CheckArgumentsNum(params, 6)) {
             return;
@@ -480,14 +488,16 @@ public class Test {
             return;
         }
 
-        if (!CheckIsTeacher(CurUserID)) {
-            System.out.println("permission denied");
-            return;
-        }
+        // SCS 2
+//        if (!CheckIsTeacher(CurUserID)) {
+//            System.out.println("permission denied");
+//            return;
+//        }
+        // SCS 3
 
         ArrayList<String> courses = new ArrayList<>();
         for (Course c : MapID2Course.values()) {
-            if (c.Teachers.contains(CurUserID)) {
+            if (c.Teachers.contains(CurUserID) || c.Assistants.contains(CurUserID) || c.Students.contains(CurUserID)) {
                 courses.add(c.DescSelf());
             }
         }
@@ -513,10 +523,12 @@ public class Test {
             return;
         }
 
-        if (!(CheckIsTeacher(CurUserID) || CheckIsAssistant(CurUserID))) {
-            System.out.println("permission denied");
-            return;
-        }
+// SCS 2
+//        if (!(CheckIsTeacher(CurUserID) || CheckIsAssistant(CurUserID))) {
+//            System.out.println("permission denied");
+//            return;
+//        }
+
 
         String courseId = params[0];
         if (!CheckCourseID(courseId)) {
@@ -526,7 +538,8 @@ public class Test {
 
         if (!MapID2Course.containsKey(courseId) ||
                 !(MapID2Course.get(courseId).Teachers.contains(CurUserID)
-                        || MapID2Course.get(courseId).Assistants.contains(CurUserID))) {
+                        || MapID2Course.get(courseId).Assistants.contains(CurUserID)
+                        || MapID2Course.get(courseId).Students.contains(CurUserID))) {
             System.out.println("course id not exist");
             return;
         }
@@ -631,10 +644,11 @@ public class Test {
             return;
         }
 
-        if (!(CheckIsTeacher(CurUserID) || CheckIsAssistant(CurUserID))){
-                System.out.println("permission denied");
-                return;
-        }
+// SCS 2
+//        if (!(CheckIsTeacher(CurUserID) || CheckIsAssistant(CurUserID))){
+//                System.out.println("permission denied");
+//                return;
+//        }
 
         if (SelectedCourse.isEmpty()) {
             System.out.println("no course selected");
@@ -650,8 +664,15 @@ public class Test {
         System.arraycopy(teachers, 0, admins, 0, teachers.length);
         System.arraycopy(assistants, 0, admins, teachers.length, assistants.length);
         Arrays.sort(admins);
-        for (String w : admins) {
-            System.out.println(MapID2Person.get(w).DescSelf());
+
+        if (CheckIsTeacher(CurUserID) || CheckIsAssistant(CurUserID)){
+            for (String w : admins) {
+                System.out.println(MapID2Person.get(w).DescSelf());
+            }
+        } else {
+            for (String w : admins) {
+                System.out.println(MapID2Person.get(w).DescSelfWithoutID());
+            }
         }
     }
     
@@ -682,6 +703,8 @@ public class Test {
             CurMode = "Student";
             System.out.println("change into Student success");
         }
+
+        SelectedCourse = "";
     }
 
     public static void HandleAddWare(String[] params) {
@@ -694,7 +717,13 @@ public class Test {
             return;
         }
 
-        if (!CheckIsTeacher(CurUserID)) {
+        // MySCS2
+//        if (!CheckIsTeacher(CurUserID)) {
+//            System.out.println("permission denied");
+//            return;
+//        }
+
+        if (!(CheckIsTeacher(CurUserID) || CheckIsAssistant(CurUserID))) {
             System.out.println("permission denied");
             return;
         }
@@ -704,10 +733,13 @@ public class Test {
             return;
         }
 
-        if (!CheckWareID(params[0])) {
-            System.out.println("ware id illegal");
-            return;
-        }
+        // MySCS2
+//        if (!CheckWareID(params[0])) {
+//            System.out.println("ware id illegal");
+//            return;
+//        }
+
+
 
         if (MapID2Ware.containsKey(params[0])) {
             System.out.println("ware id duplication");
@@ -999,8 +1031,201 @@ public class Test {
             System.out.println(MapID2Person.get(w).DescSelfForStudent());
         }
     }
+
+    public static void HandleRequestVM(String[] params) {
+        if (!CheckArgumentsNum(params, 1)) {
+            return;
+        }
+
+        if (!LoggedIn) {
+            System.out.println("not logged in");
+            return;
+        }
+
+        if (SelectedCourse.isEmpty()) {
+            System.out.println("no course selected");
+            return;
+        }
+
+        if (!MapCourse2VMs.containsKey(SelectedCourse)) {
+            MapCourse2VMs.put(SelectedCourse, new ArrayList<>());
+        }
+        String systemType = params[0];
+        VM newVM = new VM(systemType,  CurUserID, MapCourse2VMs.get(SelectedCourse).size() + 1);
+        MapCourse2VMs.get(SelectedCourse).add(newVM);
+        MapStudentAndCourse2VM.put(CurUserID + SelectedCourse, newVM);
+
+        System.out.println("requestVM success");
+    }
+
+    public static void HandleClearVM(String[] params) {
+        if (!CheckArgumentsNum(params, 1)) {
+            return;
+        }
+
+        if (!LoggedIn) {
+            System.out.println("not logged in");
+            return;
+        }
+
+        if (!(CheckIsTeacher(CurUserID)|| CheckIsAssistant(CurUserID))) {
+            System.out.println("permission denied");
+            return;
+        }
+
+        if (SelectedCourse.isEmpty()) {
+            System.out.println("no course selected");
+            return;
+        }
+
+
+        int id = Integer.valueOf(params[0]);
+        VM toDelete = MapCourse2VMs.get(SelectedCourse).remove(id - 1);
+        if (toDelete.equals(MapStudentAndCourse2VM.get(toDelete.owner + SelectedCourse))) {
+            MapStudentAndCourse2VM.remove(toDelete.owner + SelectedCourse);
+        }
+        System.out.println("clear "  + toDelete.type + " success");
+    }
+
+    public static void HandleStartVM(String[] params) {
+        if (!CheckArgumentsNum(params, 0)) {
+            return;
+        }
+
+        if (!LoggedIn) {
+            System.out.println("not logged in");
+            return;
+        }
+
+        if (SelectedCourse.isEmpty()) {
+            System.out.println("no course selected");
+            return;
+        }
+
+        VM vm = MapStudentAndCourse2VM.get(CurUserID + SelectedCourse);
+        if (vm == null) {
+            System.out.println("no VM");
+            return;
+        } else {
+            System.out.println("welcome to " + vm.type);
+        }
+
+
+        String argStr = "";
+        while (true) {
+            argStr = in.nextLine();
+            if (argStr.equals("EOF")) {
+                System.out.println("quit " + vm.type);
+                break;
+            } else {
+                vm.log.add(argStr);
+            }
+        }
+    }
+
+    public static void HandleLogVM(String[] params) {
+        if (!CheckArgumentsNum(params, 0)) {
+            return;
+        }
+
+        if (!LoggedIn) {
+            System.out.println("not logged in");
+            return;
+        }
+
+        if (SelectedCourse.isEmpty()) {
+            System.out.println("no course selected");
+            return;
+        }
+
+        VM vm = MapStudentAndCourse2VM.get(CurUserID + SelectedCourse);
+        if (vm == null) {
+            System.out.println("no log");
+            return;
+        }
+
+        if (vm.log.isEmpty()) {
+            System.out.println("no log");
+            return;
+        }
+
+        for (String s : vm.log) {
+            System.out.println(s);
+        }
+    }
+
+    public static void HandleUploadVM(String[] params) throws Exception{
+        if (!CheckArgumentsNum(params, 1)) {
+            return;
+        }
+
+        if (!LoggedIn) {
+            System.out.println("not logged in");
+            return;
+        }
+
+        if (SelectedCourse.isEmpty()) {
+            System.out.println("no course selected");
+            return;
+        }
+
+        String path = params[0];
+        File f = new File(path);
+
+        //判断目录是否存在
+        if (!f.getParentFile().exists()){
+            f.getParentFile().mkdirs();
+        }
+        //判断文件是否存在
+        if (!f.exists()){
+            f.createNewFile();
+        }
+
+        OutputStream outputStream = new FileOutputStream(f);
+        ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
+        objectOutputStream.writeObject(MapStudentAndCourse2VM.get(CurUserID + SelectedCourse));
+        objectOutputStream.close();
+        outputStream.close();
+
+        System.out.println("uploadVM success");
+    }
+
+    public static void HandleDownloadVM(String[] params) throws Exception{
+        if (!CheckArgumentsNum(params, 1)) {
+            return;
+        }
+
+        if (!LoggedIn) {
+            System.out.println("not logged in");
+            return;
+        }
+
+        if (SelectedCourse.isEmpty()) {
+            System.out.println("no course selected");
+            return;
+        }
+
+        String path = params[0];
+        InputStream fileInputStream = new FileInputStream(path);
+        ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
+        Object obj = objectInputStream.readObject();
+        objectInputStream.close();
+        fileInputStream.close();
+
+        VM vm = (VM) obj;
+        vm.owner = CurUserID;
+        if (!MapCourse2VMs.containsKey(SelectedCourse)) {
+            MapCourse2VMs.put(SelectedCourse, new ArrayList<>());
+        }
+        vm.id = MapCourse2VMs.get(SelectedCourse).size() + 1;
+        MapCourse2VMs.get(SelectedCourse).add(vm);
+        MapStudentAndCourse2VM.put(CurUserID + SelectedCourse, vm);
+
+        System.out.println("downloadVM success");
+    }
+
     public static void main(String[] args) {
-        Scanner in = new Scanner(System.in);
+
         String argStr = "";
         while (true) {
             try {
@@ -1105,6 +1330,30 @@ public class Test {
                         HandleListStudent(params);
                         break;
                     }
+                    case "requestVM": {
+                        HandleRequestVM(params);
+                        break;
+                    }
+                    case "startVM": {
+                        HandleStartVM(params);
+                        break;
+                    }
+                    case "logVM": {
+                        HandleLogVM(params);
+                        break;
+                    }
+                    case "uploadVM": {
+                        HandleUploadVM(params);
+                        break;
+                    }
+                    case "downloadVM": {
+                        HandleDownloadVM(params);
+                        break;
+                    }
+                    case "clearVM": {
+                        HandleClearVM(params);
+                        break;
+                    }
                     default: {
                         System.out.println("command " + "\'" + command + "\'" + " not found");
                         break;
@@ -1118,9 +1367,5 @@ public class Test {
             }
         }
     }
-
-
-
-
 }
 
